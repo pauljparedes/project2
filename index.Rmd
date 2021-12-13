@@ -1,7 +1,7 @@
 ---
 title: 'Project 2: Data Mining, Classification, Prediction'
 author: "SDS322E"
-date: ''
+date: '12/12/2021'
 output:
   html_document:
     toc: yes
@@ -46,7 +46,7 @@ class_diag <- function(score, truth, positive, cutoff=.5){
 
 # Mining, Classification, Prediction
 
-## Name and EID here
+## Paul Paredes (pjp849)
 
 ### Introduction 
 
@@ -54,30 +54,59 @@ Paragraph or two introducing your datasets and variables, why they are interesti
 
 ```{R}
 library(tidyverse)
-# read your datasets in here, e.g., with read_csv()
 
-# if your dataset needs tidying, do so here
+restaurant_data = read_csv("https://vincentarelbundock.github.io/Rdatasets/csv/causaldata/restaurant_inspections.csv")
 
-# any other code here
+newrestaurant = restaurant_data %>% slice(1:2500)
+
+head(newrestaurant)
+nrow(newrestaurant)
+
+newrestaurant %>% filter(Weekend == TRUE) %>% nrow()
+newrestaurant %>% filter(Weekend == FALSE) %>% nrow()
 ```
+
+The dataset I used was found in the list of datasets from https://vincentarelbundock.github.io/Rdatasets/datasets.html; this particular dataset was created by Louis-Ashley Camus and derived from restaurant health inspections performed in Anchorage, Alaska. business_name is the name of the restaurant or chain, inspection_score is the numerical Health Inspection Score given, Year is the year of inspection, NumberofLocations is the number of locations in Anchorage, and Weekend is a binary variable about whether or not the inspection was performed on a weekend (TRUE if the answer is affirmative, False otherwise). X1 is just the row number.
+
+The dataset was cut down since there were too many observations for cluster analysis, PCA, etc. to handle. There are 2,500 observations in total. Out of these observations, 12 had a health inspection on a weekend (TRUE), and 2,488 did not (FALSE).
 
 ### Cluster Analysis
 
 ```{R}
 library(cluster)
-# clustering code here
+library(ggplot2)
+library(GGally)
+
+pam_dat <- newrestaurant %>% select(inspection_score, Year, NumberofLocations)
+sil_width<-vector()
+for(i in 2:10){  
+  pam_fit <- pam(pam_dat, k = i)  
+  sil_width[i] <- pam_fit$silinfo$avg.width  
+}
+ggplot()+geom_line(aes(x=1:10,y=sil_width))+scale_x_continuous(name="k",breaks=1:10) #greatest sil_width at k=3
+
+pam1 <- pam_dat %>% pam(k=3)
+newrestaurant %>% mutate(cluster=as.factor(pam1$clustering)) %>% ggpairs(columns = c("inspection_score", "Year", "NumberofLocations"), aes(color=cluster))
+
+pam1$silinfo$avg.width
+
 ```
 
-Discussion of clustering here
+NumberofLocations and inspection_score have the strongest overall correlation at -0.227. All three variables used (inspection_score, Year, and NumberofLocations) have negative correlations with each other. The average silhouette width is 0.6264864, which indicates that a reasonable cluster solution has been found.
     
     
 ### Dimensionality Reduction with PCA
 
 ```{R}
-# PCA code here
+X = newrestaurant %>% select(3:5) %>% scale
+rest_pca<-princomp(X, cor = T)
+summary(rest_pca, loadings=T)
+
+restdf<-data.frame(PC1=rest_pca$scores[, 1],PC2=rest_pca$scores[, 2])
+ggplot(restdf, aes(PC1, PC2)) + geom_point()
 ```
 
-Discussions of PCA here. 
+Restaurants with a high PC2 score but a low PC1 score are few; the majority have high PC1 scores and middling/low PC2 scores. A restaurant with a high PC1 score has a higher health inspection score but fewer locations. A restaurant with a high PC2 score has a higher health inspection score and more locations, but was inspected at an earlier year. PC1 and PC2 explain about 0.76 of the total variance.
 
 ###  Linear Classifier
 
@@ -121,13 +150,21 @@ Discussion
 
 ```{R}
 library(reticulate)
+use_python("/usr/bin/python3", required = F)
+
+countmore = "6,7,8,9"
 ```
 
 ```{python}
-# python code here
+counting = "1,2,3,4,5"
+print(counting, r.countmore) 
 ```
 
-Discussion
+```{R}
+cat(c(py$counting, countmore))
+```
+
+countmore is a variable written in R, and counting is a variable written in Python. The prefix r. accesses R-defined objects while py$ accesses Python-defined objects.
 
 ### Concluding Remarks
 
